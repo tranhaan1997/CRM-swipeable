@@ -5,9 +5,6 @@ import {
   Chip,
   Card,
   CardContent,
-  IconButton,
-  Menu,
-  MenuItem,
   Fab,
 } from "@mui/material";
 import LayoutWrapper from "../../components/Layout/LayoutWrapper";
@@ -16,11 +13,9 @@ import React, { useEffect, useState } from "react";
 import { Street_Getlist } from "~/redux/Catalogs/streetSlice";
 import StreetIUpdateModal from "./Actions/StreetIUpdateModal";
 import { DataGrid } from "@mui/x-data-grid";
+import { useSwipeable } from "react-swipeable";
 
 import AddIcon from "@mui/icons-material/Add";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { styled } from "@mui/material/styles";
 import { useAppContext } from "~/AppContext";
 import { useIsPWA } from "~/hooks/useIsPWA";
@@ -142,107 +137,116 @@ function Streets() {
   const [addNew, setAddNew] = useState(true);
   // Item đang đc chọn
   const [selectedItem, setSelectedItem] = useState({});
-  // State cho mobile menu
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   // gọi mở form gán loại cần thêm hoặc cập nhật
   const handleIUpdate = (add) => {
     setOpenAdd(true);
     setAddNew(add);
   };
 
-  // Xử lý menu mobile
-  const handleMenuClick = (event, item) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedItem(item);
-    setMenuOpen(true);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setMenuOpen(false);
-  };
-
-  const handleEdit = () => {
-    handleIUpdate(false);
-    handleMenuClose();
-  };
-
-  const handleDelete = () => {
-    setOpenDel(true);
-    handleMenuClose();
-  };
 
   // Mobile Card Component
-  const MobileStreetCard = ({ item, index }) => (
-    <Card sx={{ mb: 1, borderRadius: 2 }}>
-      <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+  const MobileStreetCard = ({ item, index }) => {
+    const [cardTransform, setCardTransform] = useState("translateX(0px)");
+    const [cardOpacity, setCardOpacity] = useState(1);
+
+    const handlers = useSwipeable({
+      onSwipedLeft: () => {
+        // Swipe left: Edit mode
+        setSelectedItem(item);
+        handleIUpdate(false);
+      },
+      onSwipedRight: () => {
+        // Swipe right: Delete
+        setSelectedItem(item);
+        setOpenDel(true);
+      },
+      onSwiping: (eventData) => {
+        const { deltaX } = eventData;
+        const maxDistance = 100;
+        const clampedDelta = Math.max(-maxDistance, Math.min(maxDistance, deltaX));
+        
+        setCardTransform(`translateX(${clampedDelta}px)`);
+        setCardOpacity(1 - Math.abs(clampedDelta) / maxDistance * 0.3);
+      },
+      onSwiped: () => {
+        // Reset card position
+        setCardTransform("translateX(0px)");
+        setCardOpacity(1);
+      },
+      trackMouse: false,
+      trackTouch: true,
+      preventScrollOnSwipe: true,
+      delta: 10,
+    });
+
+    return (
+      <div {...handlers}>
+        <Card 
+          sx={{ 
+            mb: 1, 
+            borderRadius: 2,
+            transform: cardTransform,
+            opacity: cardOpacity,
+            transition: cardTransform === "translateX(0px)" ? "transform 0.3s ease, opacity 0.3s ease" : "none",
           }}
         >
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mr: 1 }}
+                >
+                  #{index}
+                </Typography>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 600, fontSize: "1rem" }}
+                  noWrap
+                >
+                  {item.STRT_NAME}
+                </Typography>
+              </Box>
+
               <Typography
-                variant="caption"
+                variant="body2"
                 color="text.secondary"
-                sx={{ mr: 1 }}
-              >
-                #{index}
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 600, fontSize: "1rem" }}
+                sx={{ mb: 1 }}
                 noWrap
               >
-                {item.STRT_NAME}
+                Tên viết tắt: {item.STRT_UNSIGNNAME}
               </Typography>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" noWrap>
+                  Đơn vị: {item.LAGNT_NAME}
+                </Typography>
+                <Chip
+                  label={item.STAT_NAME}
+                  color={
+                    item.STAT_ID === "ENABLE"
+                      ? "success"
+                      : item.STAT_ID === "DISABLE"
+                      ? "warning"
+                      : "default"
+                  }
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
             </Box>
-
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mb: 1 }}
-              noWrap
-            >
-              Tên viết tắt: {item.STRT_UNSIGNNAME}
-            </Typography>
-
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" noWrap>
-                Đơn vị: {item.LAGNT_NAME}
-              </Typography>
-              <Chip
-                label={item.STAT_NAME}
-                color={
-                  item.STAT_ID === "ENABLE"
-                    ? "success"
-                    : item.STAT_ID === "DISABLE"
-                    ? "warning"
-                    : "default"
-                }
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-          </Box>
-
-          <IconButton onClick={(e) => handleMenuClick(e, item)} sx={{ ml: 1 }}>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   // Load ds đường ban đầu
   useEffect(() => {
@@ -374,29 +378,6 @@ function Streets() {
         )}
       </Box>
 
-      {/* Mobile Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={menuOpen}
-        onClose={handleMenuClose}
-        anchorOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "right",
-        }}
-      >
-        <MenuItem onClick={handleEdit}>
-          <EditIcon sx={{ mr: 1, fontSize: 20 }} />
-          Sửa
-        </MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: "error.main" }}>
-          <DeleteIcon sx={{ mr: 1, fontSize: 20 }} />
-          Xóa
-        </MenuItem>
-      </Menu>
 
       {/* Dialog Thêm và cập nhật */}
       <StreetIUpdateModal
