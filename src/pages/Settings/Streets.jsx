@@ -14,11 +14,10 @@ import { Street_Getlist } from "~/redux/Catalogs/streetSlice";
 import StreetIUpdateModal from "./Actions/StreetIUpdateModal";
 import { DataGrid } from "@mui/x-data-grid";
 import { useSwipeable } from "react-swipeable";
-
+import { styled } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { styled } from "@mui/material/styles";
 import { useAppContext } from "~/AppContext";
 import { useIsPWA } from "~/hooks/useIsPWA";
 import StreetDeleteModal from "./Actions/StreetDeleteModal";
@@ -150,10 +149,37 @@ function Streets() {
     const [cardTransform, setCardTransform] = useState("translateX(0px)");
     const [isSwipeRevealed, setIsSwipeRevealed] = useState(false);
     const [swipeDirection, setSwipeDirection] = useState(null); // 'left' or 'right'
+    const [swipeTimer, setSwipeTimer] = useState(null);
+    const [isSwipeActive, setIsSwipeActive] = useState(false);
+    const [swipeStartTime, setSwipeStartTime] = useState(null);
 
     const handlers = useSwipeable({
+      onSwipeStart: () => {
+        setSwipeStartTime(Date.now());
+        // Start timer - chỉ kích hoạt swipe sau 300ms để tránh xung đột với scroll
+        const timer = setTimeout(() => {
+          setIsSwipeActive(true);
+        }, 50);
+        setSwipeTimer(timer);
+      },
       onSwiping: (eventData) => {
-        const { deltaX } = eventData;
+        const { deltaX, deltaY } = eventData;
+
+        // Kiểm tra nếu đây là vertical scroll thì không xử lý swipe
+        if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+          // Đây là vertical scroll, hủy swipe
+          if (swipeTimer) {
+            clearTimeout(swipeTimer);
+            setSwipeTimer(null);
+          }
+          setIsSwipeActive(false);
+          resetCard();
+          return;
+        }
+
+        // Chỉ xử lý swipe nếu đã được activate
+        if (!isSwipeActive) return;
+
         const maxDistance = 120;
         const clampedDelta = Math.max(
           -maxDistance,
@@ -172,11 +198,28 @@ function Streets() {
         }
       },
       onSwiped: (eventData) => {
-        const { deltaX } = eventData;
+        const { deltaX, deltaY } = eventData;
+        const swipeDuration = Date.now() - (swipeStartTime || 0);
         const actionThreshold = 150;
+        const minSwipeDuration = 200; // Tối thiểu 200ms để tránh thao tác tình cờ
 
-        // Check if swipe distance is enough to trigger action
-        if (Math.abs(deltaX) >= actionThreshold) {
+        // Clear timer
+        if (swipeTimer) {
+          clearTimeout(swipeTimer);
+          setSwipeTimer(null);
+        }
+
+        // Kiểm tra các điều kiện để trigger action:
+        // 1. Swipe phải đủ xa (>= actionThreshold)
+        // 2. Swipe phải đủ lâu (>= minSwipeDuration)
+        // 3. Swipe phải chủ yếu theo chiều ngang (deltaX > deltaY)
+        // 4. Swipe phải được activate (không phải scroll)
+        if (
+          isSwipeActive &&
+          Math.abs(deltaX) >= actionThreshold &&
+          swipeDuration >= minSwipeDuration &&
+          Math.abs(deltaX) > Math.abs(deltaY)
+        ) {
           if (deltaX > 0) {
             // Swiped right - Delete action
             setSelectedItem(item);
@@ -188,13 +231,15 @@ function Streets() {
           }
         }
 
-        // Always reset card position after swipe ends
+        // Reset states
+        setIsSwipeActive(false);
+        setSwipeStartTime(null);
         resetCard();
       },
       trackMouse: false,
       trackTouch: true,
-      preventScrollOnSwipe: true,
-      delta: 10,
+      preventScrollOnSwipe: false, // Cho phép scroll khi cần
+      delta: 15, // Tăng delta để giảm độ nhạy
     });
 
     // Reset card position
@@ -205,7 +250,14 @@ function Streets() {
     };
 
     return (
-      <Box sx={{ position: "relative", mb: 1 }}>
+      <Box
+        sx={{
+          position: "relative",
+          mb: 1,
+          overflow: "hidden", // Ngăn card tràn ra ngoài container
+          width: "100%", // Đảm bảo width không vượt quá container
+        }}
+      >
         {/* Background Action Indicators */}
         {isSwipeRevealed && (
           <>
@@ -378,7 +430,14 @@ function Streets() {
 
   return (
     <LayoutWrapper>
-      <Box sx={{ p: isPWA ? 0.5 : 1 }}>
+      <Box
+        sx={{
+          p: isPWA ? 0.5 : 1,
+          overflowX: "hidden", // Ngăn trang bị scroll ngang
+          width: "100%",
+          maxWidth: "100vw", // Không cho vượt quá viewport width
+        }}
+      >
         <Box
           sx={{
             display: "flex",
@@ -409,7 +468,13 @@ function Streets() {
 
         {/* Mobile View */}
         {isPWA ? (
-          <Box sx={{ pb: 2 }}>
+          <Box
+            sx={{
+              pb: 2,
+              overflowX: "hidden", // Ẩn horizontal scrollbar
+              overflowY: "visible", // Cho phép vertical scroll
+            }}
+          >
             {(items || []).map((item, index) => (
               <MobileStreetCard
                 key={item.STRT_ID}
