@@ -156,7 +156,7 @@ function Streets() {
     const handlers = useSwipeable({
       onSwipeStart: () => {
         setSwipeStartTime(Date.now());
-        // Start timer - chỉ kích hoạt swipe sau 300ms để tránh xung đột với scroll
+        // Start timer - chỉ kích hoạt swipe sau 50ms để tránh xung đột với scroll
         const timer = setTimeout(() => {
           setIsSwipeActive(true);
         }, 50);
@@ -189,7 +189,7 @@ function Streets() {
         setCardTransform(`translateX(${clampedDelta}px)`);
 
         // Show visual feedback when reaching threshold
-        if (Math.abs(clampedDelta) > 60) {
+        if (Math.abs(clampedDelta) > 30) {
           setIsSwipeRevealed(true);
           setSwipeDirection(clampedDelta > 0 ? "right" : "left");
         } else {
@@ -334,13 +334,21 @@ function Streets() {
         {/* Main Card */}
         <div {...handlers}>
           <Card
+            elevation={0}
             sx={{
+              // Thêm Shadow nhẹ khi đang swipe
+              boxShadow: isSwipeActive ? 3 : "none",
+              border: "0.5px solid",
+              borderColor: "divider",
               borderRadius: 2,
               transform: cardTransform,
-              transition:
-                cardTransform === "translateX(0px)"
-                  ? "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
-                  : "none",
+              // transition:
+              //   cardTransform === "translateX(0px)"
+              //     ? "transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)"
+              //     : "none",
+
+              //Hiệu ứng chuyển động mượt hơn cho cảm giác nảy nhẹ
+              transition: "transform 300ms cubic-bezier(.34,1.56,.64,1)",
               willChange: "transform",
               backfaceVisibility: "hidden",
               position: "relative",
