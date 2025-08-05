@@ -273,7 +273,7 @@ function Streets() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "#f44336",
+                  backgroundColor: "#c62828",
                   borderRadius: 2,
                   zIndex: 1,
                 }}
@@ -307,7 +307,7 @@ function Streets() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "#2196f3",
+                  backgroundColor: "#1565c0",
                   borderRadius: 2,
                   zIndex: 1,
                 }}
