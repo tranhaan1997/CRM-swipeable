@@ -16,6 +16,8 @@ import { DataGrid } from "@mui/x-data-grid";
 import { useSwipeable } from "react-swipeable";
 
 import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { styled } from "@mui/material/styles";
 import { useAppContext } from "~/AppContext";
 import { useIsPWA } from "~/hooks/useIsPWA";
@@ -146,143 +148,226 @@ function Streets() {
   // Mobile Card Component
   const MobileStreetCard = ({ item, index }) => {
     const [cardTransform, setCardTransform] = useState("translateX(0px)");
-    const [cardOpacity, setCardOpacity] = useState(1);
-    const [swipeTimer, setSwipeTimer] = useState(null);
-    const [isSwipeActive, setIsSwipeActive] = useState(false);
+    const [isSwipeRevealed, setIsSwipeRevealed] = useState(false);
+    const [swipeDirection, setSwipeDirection] = useState(null); // 'left' or 'right'
 
     const handlers = useSwipeable({
-      onSwipeStart: () => {
-        // Start timer when swipe begins
-        const timer = setTimeout(() => {
-          setIsSwipeActive(true);
-        }, 500); // Reduced delay for faster response
-        setSwipeTimer(timer);
-      },
-      onSwipedLeft: () => {
-        // Only trigger if swipe was held long enough
-        if (isSwipeActive) {
-          setSelectedItem(item);
-          handleIUpdate(false);
-        }
-        // Reset states
-        if (swipeTimer) clearTimeout(swipeTimer);
-        setIsSwipeActive(false);
-        setSwipeTimer(null);
-      },
-      onSwipedRight: () => {
-        // Only trigger if swipe was held long enough
-        if (isSwipeActive) {
-          setSelectedItem(item);
-          setOpenDel(true);
-        }
-        // Reset states
-        if (swipeTimer) clearTimeout(swipeTimer);
-        setIsSwipeActive(false);
-        setSwipeTimer(null);
-      },
       onSwiping: (eventData) => {
         const { deltaX } = eventData;
-        const maxDistance = 120; // Increased for smoother movement
+        const maxDistance = 120;
         const clampedDelta = Math.max(
           -maxDistance,
           Math.min(maxDistance, deltaX)
         );
 
-        // Show immediate visual feedback but only activate after timer
-        const immediateTransform = `translateX(${clampedDelta * 0.6}px)`; // Reduce movement for subtlety
-        const immediateOpacity =
-          1 - (Math.abs(clampedDelta) / maxDistance) * 0.2;
+        setCardTransform(`translateX(${clampedDelta}px)`);
 
-        setCardTransform(immediateTransform);
-        setCardOpacity(immediateOpacity);
+        // Show visual feedback when reaching threshold
+        if (Math.abs(clampedDelta) > 60) {
+          setIsSwipeRevealed(true);
+          setSwipeDirection(clampedDelta > 0 ? "right" : "left");
+        } else {
+          setIsSwipeRevealed(false);
+          setSwipeDirection(null);
+        }
       },
-      onSwiped: () => {
-        // Clear timer and reset states
-        if (swipeTimer) clearTimeout(swipeTimer);
-        setIsSwipeActive(false);
-        setSwipeTimer(null);
+      onSwiped: (eventData) => {
+        const { deltaX } = eventData;
+        const actionThreshold = 150;
 
-        // Reset card position with smooth transition
-        setCardTransform("translateX(0px)");
-        setCardOpacity(1);
+        // Check if swipe distance is enough to trigger action
+        if (Math.abs(deltaX) >= actionThreshold) {
+          if (deltaX > 0) {
+            // Swiped right - Delete action
+            setSelectedItem(item);
+            setOpenDel(true);
+          } else {
+            // Swiped left - Edit action
+            setSelectedItem(item);
+            handleIUpdate(false);
+          }
+        }
+
+        // Always reset card position after swipe ends
+        resetCard();
       },
       trackMouse: false,
       trackTouch: true,
-      preventScrollOnSwipe: false, // Prevent scroll during swipe
-      delta: 5, // Lower threshold for more responsive touch
+      preventScrollOnSwipe: true,
+      delta: 10,
     });
 
+    // Reset card position
+    const resetCard = () => {
+      setCardTransform("translateX(0px)");
+      setIsSwipeRevealed(false);
+      setSwipeDirection(null);
+    };
+
     return (
-      <div {...handlers}>
-        <Card
-          sx={{
-            mb: 1,
-            borderRadius: 2,
-            transform: cardTransform,
-            opacity: cardOpacity,
-            transition:
-              cardTransform === "translateX(0px)"
-                ? "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
-                : "none",
-            willChange: "transform, opacity", // Optimize for animations
-            backfaceVisibility: "hidden", // Improve performance
-          }}
-        >
-          <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{ mr: 1 }}
-                >
-                  #{index}
-                </Typography>
-                <Typography
-                  variant="h6"
-                  sx={{ fontWeight: 600, fontSize: "1rem" }}
-                  noWrap
-                >
-                  {item.STRT_NAME}
-                </Typography>
-              </Box>
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-                noWrap
-              >
-                Tên viết tắt: {item.STRT_UNSIGNNAME}
-              </Typography>
-
+      <Box sx={{ position: "relative", mb: 1 }}>
+        {/* Background Action Indicators */}
+        {isSwipeRevealed && (
+          <>
+            {/* Left side - Delete indicator (shown when swiping right) */}
+            {swipeDirection === "right" && (
               <Box
                 sx={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "120px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  justifyContent: "center",
+                  backgroundColor: "#f44336",
+                  borderRadius: 2,
+                  zIndex: 1,
                 }}
               >
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  Đơn vị: {item.LAGNT_NAME}
-                </Typography>
-                <Chip
-                  label={item.STAT_NAME}
-                  color={
-                    item.STAT_ID === "ENABLE"
-                      ? "success"
-                      : item.STAT_ID === "DISABLE"
-                      ? "warning"
-                      : "default"
-                  }
-                  size="small"
-                  variant="outlined"
-                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <DeleteIcon sx={{ mr: 1 }} />
+                  <Typography variant="body2" color="inherit" fontWeight="bold">
+                    Xóa
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          </CardContent>
-        </Card>
-      </div>
+            )}
+
+            {/* Right side - Edit indicator (shown when swiping left) */}
+            {swipeDirection === "left" && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "120px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#2196f3",
+                  borderRadius: 2,
+                  zIndex: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <EditIcon sx={{ mr: 1 }} />
+                  <Typography variant="body2" color="inherit" fontWeight="bold">
+                    Sửa
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* Main Card */}
+        <div {...handlers}>
+          <Card
+            sx={{
+              borderRadius: 2,
+              transform: cardTransform,
+              transition:
+                cardTransform === "translateX(0px)"
+                  ? "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                  : "none",
+              willChange: "transform",
+              backfaceVisibility: "hidden",
+              position: "relative",
+              zIndex: 2,
+            }}
+          >
+            <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mr: 1 }}
+                  >
+                    #{index}
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, fontSize: "1rem" }}
+                    noWrap
+                  >
+                    {item.STRT_NAME}
+                  </Typography>
+                </Box>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                  noWrap
+                >
+                  Tên viết tắt: {item.STRT_UNSIGNNAME}
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" noWrap>
+                    Đơn vị: {item.LAGNT_NAME}
+                  </Typography>
+                  <Chip
+                    label={item.STAT_NAME}
+                    color={
+                      item.STAT_ID === "ENABLE"
+                        ? "success"
+                        : item.STAT_ID === "DISABLE"
+                        ? "warning"
+                        : "default"
+                    }
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+
+                {/* Optional: Add a subtle hint about swipe functionality */}
+                {!isSwipeRevealed && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      opacity: 0.3,
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      ←→
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Box>
     );
   };
 
