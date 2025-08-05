@@ -143,51 +143,89 @@ function Streets() {
     setAddNew(add);
   };
 
-
   // Mobile Card Component
   const MobileStreetCard = ({ item, index }) => {
     const [cardTransform, setCardTransform] = useState("translateX(0px)");
     const [cardOpacity, setCardOpacity] = useState(1);
+    const [swipeTimer, setSwipeTimer] = useState(null);
+    const [isSwipeActive, setIsSwipeActive] = useState(false);
 
     const handlers = useSwipeable({
+      onSwipeStart: () => {
+        // Start timer when swipe begins
+        const timer = setTimeout(() => {
+          setIsSwipeActive(true);
+        }, 500); // Reduced delay for faster response
+        setSwipeTimer(timer);
+      },
       onSwipedLeft: () => {
-        // Swipe left: Edit mode
-        setSelectedItem(item);
-        handleIUpdate(false);
+        // Only trigger if swipe was held long enough
+        if (isSwipeActive) {
+          setSelectedItem(item);
+          handleIUpdate(false);
+        }
+        // Reset states
+        if (swipeTimer) clearTimeout(swipeTimer);
+        setIsSwipeActive(false);
+        setSwipeTimer(null);
       },
       onSwipedRight: () => {
-        // Swipe right: Delete
-        setSelectedItem(item);
-        setOpenDel(true);
+        // Only trigger if swipe was held long enough
+        if (isSwipeActive) {
+          setSelectedItem(item);
+          setOpenDel(true);
+        }
+        // Reset states
+        if (swipeTimer) clearTimeout(swipeTimer);
+        setIsSwipeActive(false);
+        setSwipeTimer(null);
       },
       onSwiping: (eventData) => {
         const { deltaX } = eventData;
-        const maxDistance = 100;
-        const clampedDelta = Math.max(-maxDistance, Math.min(maxDistance, deltaX));
-        
-        setCardTransform(`translateX(${clampedDelta}px)`);
-        setCardOpacity(1 - Math.abs(clampedDelta) / maxDistance * 0.3);
+        const maxDistance = 120; // Increased for smoother movement
+        const clampedDelta = Math.max(
+          -maxDistance,
+          Math.min(maxDistance, deltaX)
+        );
+
+        // Show immediate visual feedback but only activate after timer
+        const immediateTransform = `translateX(${clampedDelta * 0.6}px)`; // Reduce movement for subtlety
+        const immediateOpacity =
+          1 - (Math.abs(clampedDelta) / maxDistance) * 0.2;
+
+        setCardTransform(immediateTransform);
+        setCardOpacity(immediateOpacity);
       },
       onSwiped: () => {
-        // Reset card position
+        // Clear timer and reset states
+        if (swipeTimer) clearTimeout(swipeTimer);
+        setIsSwipeActive(false);
+        setSwipeTimer(null);
+
+        // Reset card position with smooth transition
         setCardTransform("translateX(0px)");
         setCardOpacity(1);
       },
       trackMouse: false,
       trackTouch: true,
-      preventScrollOnSwipe: true,
-      delta: 10,
+      preventScrollOnSwipe: false, // Prevent scroll during swipe
+      delta: 5, // Lower threshold for more responsive touch
     });
 
     return (
       <div {...handlers}>
-        <Card 
-          sx={{ 
-            mb: 1, 
+        <Card
+          sx={{
+            mb: 1,
             borderRadius: 2,
             transform: cardTransform,
             opacity: cardOpacity,
-            transition: cardTransform === "translateX(0px)" ? "transform 0.3s ease, opacity 0.3s ease" : "none",
+            transition:
+              cardTransform === "translateX(0px)"
+                ? "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+                : "none",
+            willChange: "transform, opacity", // Optimize for animations
+            backfaceVisibility: "hidden", // Improve performance
           }}
         >
           <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
@@ -377,7 +415,6 @@ function Streets() {
           </Box>
         )}
       </Box>
-
 
       {/* Dialog Thêm và cập nhật */}
       <StreetIUpdateModal

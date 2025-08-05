@@ -4,7 +4,8 @@ import Chat from "~/components/Forms/Chat";
 function Crm() {
   return (
     <LayoutWrapper>
-      <Chat />
+      abc
+      {/* <Chat /> */}
     </LayoutWrapper>
   );
 }

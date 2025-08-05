@@ -10,8 +10,8 @@ import {
   ListItemText,
 } from "@mui/material";
 import { Notifications, NotificationsNone } from "@mui/icons-material";
-import { requestFCMToken } from "~/firebase-config";
-import { notifyAPI } from "~/apis/Systems/notifyAPI";
+// import { requestFCMToken } from "~/firebase-config";
+// import { notifyAPI } from "~/apis/Systems/notifyAPI";
 
 function NotificationMenu() {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -46,16 +46,16 @@ function NotificationMenu() {
 
   const handleClick = async (event) => {
     // gọi yêu cầu cho phép mở quyền nhận thông báo:
-    var token = await requestFCMToken();
-    if (token) {
-      // Update Token API.
-      const postData = {
-        Token: token,
-      };
-      const result = await notifyAPI.NotifyReg(postData);
-      console.log("🚀 ~ handleClick ~ result:", result);
-    }
-    console.log("🚀 ~ handleClick ~ token:", token);
+    // var token = await requestFCMToken();
+    // if (token) {
+    //   // Update Token API.
+    //   const postData = {
+    //     Token: token,
+    //   };
+    //   const result = await notifyAPI.NotifyReg(postData);
+    //   console.log("🚀 ~ handleClick ~ result:", result);
+    // }
+    // console.log("🚀 ~ handleClick ~ token:", token);
     setAnchorEl(event.currentTarget);
   };
 
