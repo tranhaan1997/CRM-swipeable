@@ -284,7 +284,9 @@ function MobileBottomNavigation() {
           </Typography>
         </Box>
         <Divider />
-        <List sx={{ pt: 1, pb: 8, overflow: "auto", flex: 1 }}>
+        <List
+          sx={{ pt: 1, pb: 8, overflow: "auto", overflowX: "hidden", flex: 1 }}
+        >
           {settingsSubmenu.map((item) => (
             <div key={item.id}>
               {item.isTitle ? (
